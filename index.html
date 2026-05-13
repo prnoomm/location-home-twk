@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบกรอกพิกัดการเยี่ยมบ้านนักเรียน</title>
+    
+    <!-- Google Fonts: Sarabun -->
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Leaflet CSS (สำหรับแผนที่) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- DataTables CSS (Tailwind Theme) -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.tailwindcss.min.css">
+    
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- กำหนดค่าเริ่มต้นและ CSS เพิ่มเติม -->
+    <style>
+        body {
+            font-family: 'Sarabun', sans-serif;
+            background-color: #f0f7ff;
+        }
+        
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.5s; }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        #mapAdd, #mapShow { 
+            height: 400px; 
+            border-radius: 0.75rem; 
+            z-index: 1; 
+        }
+        
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #93c5fd; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #3b82f6; }
+        
+        .dataTables_wrapper .dataTables_length select,
+        .dataTables_wrapper .dataTables_filter input {
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            padding: 0.25rem 0.5rem;
+            margin-left: 0.5rem;
+        }
+        
+        .error { color: #ef4444; font-size: 0.875rem; margin-top: 0.25rem; }
+    </style>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Sarabun', 'sans-serif'] },
+                    colors: {
+                        primary: '#1d4ed8',
+                        secondary: '#3b82f6',
+                        accent: '#dbeafe'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="text-gray-800 antialiased min-h-screen flex flex-col">
+
+    <header class="w-full pt-8 pb-4 flex flex-col items-center justify-center">
+        <img src="https://krudevtech.com/img/logonoomdevtech3.png" alt="Logo" class="h-[100px] md:h-[120px] lg:h-[150px] object-contain mb-3 drop-shadow-md hover:scale-105 transition-transform duration-300">
+        <h1 class="text-2xl md:text-3xl font-bold text-primary text-center px-4">ระบบกรอกพิกัดการเยี่ยมบ้านนักเรียน</h1>
+    </header>
+
+    <main class="flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        
+        <!-- เมนู Tabs -->
+        <div class="flex flex-wrap justify-center space-x-2 md:space-x-4 mb-8 bg-white p-2 rounded-2xl shadow-sm border border-blue-100 w-max mx-auto">
+            <button onclick="switchTab('tab-add')" id="btn-tab-add" class="tab-btn px-4 md:px-6 py-2.5 rounded-xl font-medium text-sm md:text-base transition-all duration-300 bg-primary text-white shadow-md flex items-center gap-2">
+                <i class="fas fa-user-plus"></i> <span>เพิ่มข้อมูล</span>
+            </button>
+            <button onclick="switchTab('tab-show')" id="btn-tab-show" class="tab-btn px-4 md:px-6 py-2.5 rounded-xl font-medium text-sm md:text-base transition-all duration-300 text-gray-600 hover:bg-blue-50 flex items-center gap-2">
+                <i class="fas fa-table"></i> <span>แสดงข้อมูล</span>
+            </button>
+            <button onclick="switchTab('tab-dash')" id="btn-tab-dash" class="tab-btn px-4 md:px-6 py-2.5 rounded-xl font-medium text-sm md:text-base transition-all duration-300 text-gray-600 hover:bg-blue-50 flex items-center gap-2">
+                <i class="fas fa-chart-pie"></i> <span>Dashboard</span>
+            </button>
+        </div>
+
+        <div id="tab-add" class="tab-content active">
+            <div class="bg-white rounded-2xl shadow-xl overflow-hidden border border-blue-50">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-0">
+                    
+                    <!-- ฝั่งซ้าย: ฟอร์ม -->
+                    <div class="p-6 md:p-8">
+                        <div class="flex items-center gap-3 mb-6 border-b pb-4">
+                            <div class="bg-blue-100 p-3 rounded-lg text-primary">
+                                <i class="fas fa-file-signature text-xl"></i>
+                            </div>
+                            <h2 class="text-xl font-bold text-gray-800">กรอกข้อมูลนักเรียน</h2>
+                        </div>
+                        
+                        <form id="studentForm" class="space-y-5">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div class="col-span-1 md:col-span-2">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">เลขประจำตัวนักเรียน <span class="text-red-500">*</span></label>
+                                    <input type="text" name="studentId" id="studentId" required class="w-full rounded-lg border-gray-300 bg-gray-50 border p-2.5 focus:ring-2 focus:ring-secondary focus:border-secondary outline-none transition-all" placeholder="เช่น 12345">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">คำนำหน้า <span class="text-red-500">*</span></label>
+                                    <select name="prefix" id="prefix" required class="w-full rounded-lg border-gray-300 bg-gray-50 border p-2.5 focus:ring-2 focus:ring-secondary focus:border-secondary outline-none transition-all">
+                                        <option value="">เลือก</option>
+                                        <option value="เด็กชาย">เด็กชาย</option>
+                                        <option value="เด็กหญิง">เด็กหญิง</option>
+                                        <option value="นาย">นาย</option>
+                                        <option value="นางสาว">นางสาว</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div class="col-span-1 md:col-span-2">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">ชื่อ-นามสกุล <span class="text-red-500">*</span></label>
+                                    <input type="text" name="fullName" id="fullName" required class="w-full rounded-lg border-gray-300 bg-gray-50 border p-2.5 focus:ring-2 focus:ring-secondary focus:border-secondary outline-none transition-all" placeholder="ระบุชื่อ และ นามสกุล">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">ชื่อเล่น</label>
+                                    <input type="text" name="nickname" id="nickname" class="w-full rounded-lg border-gray-300 bg-gray-50 border p-2.5 focus:ring-2 focus:ring-secondary focus:border-secondary outline-none transition-all" placeholder="ชื่อเล่น">
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">ระดับชั้น <span class="text-red-500">*</span></label>
+                                    <select name="grade" id="grade" required class="w-full rounded-lg border-gray-300 bg-gray-50 border p-2.5 focus:ring-2 focus:ring-secondary focus:border-secondary outline-none transition-all">
+                                        <option value="">เลือกชั้น</option>
+                                        <option value="ม.1">ม.1</option>
+                                        <option value="ม.2">ม.2</option>
+                                        <option value="ม.3">ม.3</option>
+                                        <option value="ม.4">ม.4</option>
+                                        <option value="ม.5">ม.5</option>
+                                        <option value="ม.6">ม.6</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">ห้อง <span class="text-red-500">*</span></label>
+                                    <select name="room" id="room" required class="w-full rounded-lg border-gray-300 bg-gray-50 border p-2.5 focus:ring-2 focus:ring-secondary focus:border-secondary outline-none transition-all">
+                                        <option value="">เลือกห้อง</option>
+                                        <option value="1">1</option>
+                                        <option value="2">2</option>
+                                        <option value="3">3</option>
+                                        <option value="4">4</option>
+                                        <option value="5">5</option>
+                                        <option value="6">6</option>
+                                        <option value="7">7</option>
+                                        <option value="8">8</option>
+                                        <option value="9">9</option>
+                                        <option value="10">10</option>
+                                        <option value="11">11</option>
+                                        <option value="12">12</option>
+                                        <option value="13">13</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">เบอร์โทรศัพท์ <span class="text-red-500">*</span></label>
+                                    <input type="tel" name="phone" id="phone" required maxlength="10" minlength="10" class="w-full rounded-lg border-gray-300 bg-gray-50 border p-2.5 focus:ring-2 focus:ring-secondary focus:border-secondary outline-none transition-all" placeholder="08xxxxxxxx">
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="md:col-span-2">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">บ้านเลขที่ / ชื่อหมู่บ้าน</label>
+                                    <input type="text" name="village" id="village" class="w-full rounded-lg border-gray-300 bg-gray-50 border p-2.5 focus:ring-2 focus:ring-secondary focus:border-secondary outline-none transition-all" placeholder="เช่น 123/4 ม.5 บ้านหนองตะแคง">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">ตำบล <span class="text-red-500">*</span></label>
+                                    <input type="text" name="subDistrict" id="subDistrict" required class="w-full rounded-lg border-gray-300 bg-gray-50 border p-2.5 focus:ring-2 focus:ring-secondary focus:border-secondary outline-none transition-all" placeholder="ตำบล">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">อำเภอ <span class="text-red-500">*</span></label>
+                                    <input type="text" name="district" id="district" required class="w-full rounded-lg border-gray-300 bg-gray-50 border p-2.5 focus:ring-2 focus:ring-secondary focus:border-secondary outline-none transition-all" placeholder="อำเภอ">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">จังหวัด <span class="text-red-500">*</span></label>
+                                    <input type="text" name="province" id="province" required class="w-full rounded-lg border-gray-300 bg-gray-50 border p-2.5 focus:ring-2 focus:ring-secondary focus:border-secondary outline-none transition-all" placeholder="จังหวัด">
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-4 bg-blue-50 p-4 rounded-xl border border-blue-100">
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">ละติจูด (Latitude)</label>
+                                    <input type="text" name="lat" id="lat" readonly required class="w-full rounded-md border-gray-200 bg-white border p-2 text-sm text-gray-500 outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">ลองจิจูด (Longitude)</label>
+                                    <input type="text" name="lng" id="lng" readonly required class="w-full rounded-md border-gray-200 bg-white border p-2 text-sm text-gray-500 outline-none">
+                                </div>
+                            </div>
+
+                            <button type="submit" id="submitBtn" class="w-full bg-gradient-to-r from-primary to-secondary text-white font-bold py-3.5 px-4 rounded-xl shadow-lg hover:shadow-xl transform transition hover:-translate-y-0.5 flex items-center justify-center gap-2 text-lg">
+                                <i class="fas fa-save"></i> บันทึกข้อมูลนักเรียน
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- ฝั่งขวา: แผนที่สำหรับปักหมุดตอนเพิ่มข้อมูล -->
+                    <div class="bg-gray-100 border-l border-gray-200 flex flex-col">
+                        <div class="p-4 md:p-6 bg-white border-b flex justify-between items-center">
+                            <div>
+                                <h3 class="font-bold text-gray-800"><i class="fas fa-map-marker-alt text-red-500 mr-2"></i>เลือกพิกัดบ้านนักเรียน</h3>
+                                <p class="text-xs text-gray-500 mt-1">ลากหมุดสีแดงไปยังตำแหน่งบ้าน หรือกดปุ่มด้านขวา</p>
+                            </div>
+                            <button type="button" onclick="getLocation()" class="bg-white border-2 border-primary text-primary hover:bg-primary hover:text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 shadow-sm">
+                                <i class="fas fa-crosshairs"></i> ดึงตำแหน่งปัจจุบัน
+                            </button>
+                        </div>
+                        <div class="flex-grow p-4 relative">
+                            <div id="mapAdd" class="w-full h-full min-h-[400px] border-2 border-white shadow-inner"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-show" class="tab-content">
+            <div class="bg-white rounded-2xl shadow-xl p-6 md:p-8 border border-blue-50">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 border-b pb-4">
+                    <div class="flex items-center gap-3">
+                        <div class="bg-blue-100 p-3 rounded-lg text-primary">
+                            <i class="fas fa-list-alt text-xl"></i>
+                        </div>
+                        <h2 class="text-xl font-bold text-gray-800">ข้อมูลพิกัดการเยี่ยมบ้านนักเรียน</h2>
+                    </div>
+                    <button onclick="loadData()" class="bg-secondary hover:bg-primary text-white px-5 py-2.5 rounded-xl font-medium transition flex items-center gap-2 shadow-md">
+                        <i class="fas fa-sync-alt"></i> อัปเดตข้อมูลล่าสุด
+                    </button>
+                </div>
+                
+                <!-- ส่วนเครื่องมือกรองข้อมูล (Filter) -->
+                <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 mb-6 flex flex-col md:flex-row gap-4 items-center justify-between">
+                    <div class="flex flex-col md:flex-row gap-4 w-full md:w-auto flex-grow">
+                        <div class="w-full md:w-48">
+                            <label class="block text-xs font-bold text-gray-600 mb-1 uppercase tracking-wide">กรองระดับชั้น</label>
+                            <select id="filterGrade" onchange="applyFilter()" class="w-full rounded-lg border-gray-300 bg-white border p-2 text-sm focus:ring-2 focus:ring-secondary outline-none transition-all shadow-sm">
+                                <option value="">ทุกระดับชั้น</option>
+                                <option value="ม.1">ม.1</option>
+                                <option value="ม.2">ม.2</option>
+                                <option value="ม.3">ม.3</option>
+                                <option value="ม.4">ม.4</option>
+                                <option value="ม.5">ม.5</option>
+                                <option value="ม.6">ม.6</option>
+                            </select>
+                        </div>
+                        <div class="w-full md:w-48">
+                            <label class="block text-xs font-bold text-gray-600 mb-1 uppercase tracking-wide">กรองห้องเรียน</label>
+                            <select id="filterRoom" onchange="applyFilter()" class="w-full rounded-lg border-gray-300 bg-white border p-2 text-sm focus:ring-2 focus:ring-secondary outline-none transition-all shadow-sm">
+                                <option value="">ทุกห้อง</option>
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                                <option value="3">3</option>
+                                <option value="4">4</option>
+                                <option value="5">5</option>
+                                <option value="6">6</option>
+                                <option value="7">7</option>
+                                <option value="8">8</option>
+                                <option value="9">9</option>
+                                <option value="10">10</option>
+                                <option value="11">11</option>
+                                <option value="12">12</option>
+                                <option value="13">13</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="w-full md:w-auto text-right md:text-left mt-2 md:mt-0">
+                        <div class="text-sm text-gray-600 bg-white py-2 px-4 rounded-lg border border-gray-200 shadow-sm inline-block">
+                            พบข้อมูลที่ตรงกัน: <span id="filteredCount" class="font-bold text-primary text-lg">0</span> รายการ
+                        </div>
+                    </div>
+                </div>
+
+                <!-- แผนที่แสดงพิกัดที่กรองแล้ว -->
+                <div class="w-full mb-8 relative bg-gray-50 p-2 rounded-xl border border-gray-200">
+                    <h3 class="font-bold text-gray-800 mb-2 px-2 pt-2"><i class="fas fa-map-marked-alt text-primary mr-2"></i>แผนที่แสดงพิกัดรายชั้น/ห้อง</h3>
+                    <div id="mapShow" class="w-full h-[400px] border-2 border-white shadow-inner rounded-lg"></div>
+                    <div class="absolute bottom-6 left-6 z-[1000] bg-white/90 backdrop-blur px-4 py-2 rounded-lg shadow-md border border-gray-100 pointer-events-none">
+                        <span class="text-sm font-semibold text-gray-700">แสดงบนแผนที่: <span id="mapShow-student-count" class="text-primary font-bold">0</span> คน</span>
+                    </div>
+                </div>
+                
+                <div class="overflow-x-auto w-full">
+                    <table id="dataTable" class="w-full text-sm text-left text-gray-500">
+                        <thead class="text-xs text-gray-700 uppercase bg-blue-50">
+                            <tr>
+                                <th class="px-4 py-3 rounded-tl-lg">รหัสนักเรียน</th>
+                                <th class="px-4 py-3">ชื่อ-นามสกุล</th>
+                                <th class="px-4 py-3">ชั้น</th>
+                                <th class="px-4 py-3">ห้อง</th>
+                                <th class="px-4 py-3">เบอร์โทรศัพท์</th>
+                                <th class="px-4 py-3">ตำบล</th>
+                                <th class="px-4 py-3 text-center">พิกัด</th>
+                                <th class="px-4 py-3 rounded-tr-lg text-center">จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody">
+                            <!-- ข้อมูลจะถูกโหลดมาใส่ที่นี่ -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-dash" class="tab-content">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                
+                <!-- Chart 1: แผนภูมิแท่ง -->
+                <div class="bg-white rounded-2xl shadow-xl p-6 border border-blue-50">
+                    <div class="flex items-center gap-3 mb-6 border-b pb-4">
+                        <div class="bg-indigo-100 p-2 rounded-lg text-indigo-600">
+                            <i class="fas fa-chart-bar"></i>
+                        </div>
+                        <h2 class="text-lg font-bold text-gray-800">จำนวนนักเรียนแต่ละระดับชั้น</h2>
+                    </div>
+                    <div class="relative h-[300px] w-full">
+                        <canvas id="barChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Chart 2: แผนภูมิวงกลม -->
+                <div class="bg-white rounded-2xl shadow-xl p-6 border border-blue-50">
+                    <div class="flex items-center gap-3 mb-6 border-b pb-4">
+                        <div class="bg-pink-100 p-2 rounded-lg text-pink-600">
+                            <i class="fas fa-chart-pie"></i>
+                        </div>
+                        <h2 class="text-lg font-bold text-gray-800">สัดส่วนนักเรียนตามตำบล</h2>
+                    </div>
+                    <div class="relative h-[300px] w-full flex justify-center">
+                        <canvas id="pieChart"></canvas>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </main>
+
+    <footer class="w-full text-center py-6 text-sm text-gray-500 font-medium">
+        © 2026 ระบบกรอกพิกัดการเยี่ยมบ้านนักเรียน | Pichayanart Reerak
+    </footer>
+
+    <!-- Modal สำหรับดูข้อมูลรายละเอียด -->
+    <div id="detailModal" class="fixed inset-0 bg-black/60 z-[2000] hidden flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full transform scale-95 transition-transform duration-300 overflow-hidden" id="modalContent">
+            <div class="bg-gradient-to-r from-primary to-secondary p-4 flex justify-between items-center text-white">
+                <h3 class="font-bold text-lg"><i class="fas fa-address-card mr-2"></i>ข้อมูลนักเรียน</h3>
+                <button onclick="closeModal()" class="text-white hover:text-gray-200 transition text-xl"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-6" id="studentDetailBody">
+                <!-- ข้อมูลจะแสดงตรงนี้ -->
+            </div>
+            <div class="bg-gray-50 p-4 border-t flex justify-end">
+                <button onclick="closeModal()" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition font-medium">ปิดหน้าต่าง</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <!-- jQuery Validate -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.19.5/jquery.validate.min.js"></script>
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- DataTables JS -->
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.tailwindcss.min.js"></script>
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        // ==========================================
+        // 1. ตั้งค่าและตัวแปรหลัก
+        // ==========================================
+        // !!! สำคัญ: นำ URL ของ Web App ที่ได้จาก Google Apps Script มาใส่ที่นี่ !!!
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbypNQog4NXWTTAWdbB_vhhjak5fsLres-DmUB-sWdjB57tAG2vJCsz9FiEUSjeVNrfC/exec';
+
+        let mapAdd, mapShow, markerAdd;
+        let allMarkers = []; 
+        let dataTable;
+        let chartBar, chartPie;
+        let globalStudentData = [];
+        let currentDisplayData = []; 
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => {
+                el.classList.remove('bg-primary', 'text-white', 'shadow-md');
+                el.classList.add('text-gray-600', 'hover:bg-blue-50');
+            });
+
+            document.getElementById(tabId).classList.add('active');
+            
+            const btn = document.getElementById('btn-' + tabId);
+            btn.classList.remove('text-gray-600', 'hover:bg-blue-50');
+            btn.classList.add('bg-primary', 'text-white', 'shadow-md');
+
+            // รีเฟรชแผนที่เมื่อสลับแท็บ
+            if (tabId === 'tab-add' && mapAdd) {
+                setTimeout(() => mapAdd.invalidateSize(), 100);
+            }
+            if (tabId === 'tab-show' && mapShow) {
+                setTimeout(() => {
+                    mapShow.invalidateSize();
+                    // ให้แผนที่โชว์พอดีกับหมุดทุกตัวถ้ามีข้อมูล
+                    if (allMarkers.length > 0) {
+                        const group = new L.featureGroup(allMarkers);
+                        mapShow.fitBounds(group.getBounds(), { padding: [30, 30], maxZoom: 16 });
+                    }
+                }, 100);
+            }
+            
+            if ((tabId === 'tab-show' || tabId === 'tab-dash') && globalStudentData.length === 0) {
+                loadData();
+            }
+        }
+
+        function initMap() {
+            const initialLat = 19.1666;
+            const initialLng = 99.9022;
+
+            // === แผนที่ 1 สำหรับแท็บเพิ่มข้อมูล ===
+            mapAdd = L.map('mapAdd').setView([initialLat, initialLng], 10);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(mapAdd);
+
+            const redIcon = new L.Icon({
+                iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+                shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
+            });
+
+            markerAdd = L.marker([initialLat, initialLng], { draggable: true, icon: redIcon }).addTo(mapAdd);
+            markerAdd.bindPopup("ลากหมุดไปที่ตำแหน่งบ้านนักเรียน").openPopup();
+
+            markerAdd.on('dragend', function (e) {
+                const position = markerAdd.getLatLng();
+                document.getElementById('lat').value = position.lat.toFixed(6);
+                document.getElementById('lng').value = position.lng.toFixed(6);
+                mapAdd.panTo(position);
+            });
+
+            mapAdd.on('click', function(e) {
+                markerAdd.setLatLng(e.latlng);
+                document.getElementById('lat').value = e.latlng.lat.toFixed(6);
+                document.getElementById('lng').value = e.latlng.lng.toFixed(6);
+            });
+
+            // === แผนที่ 2 สำหรับแท็บแสดงข้อมูล ===
+            mapShow = L.map('mapShow').setView([initialLat, initialLng], 10);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(mapShow);
+        }
+
+        function getLocation() {
+            if (navigator.geolocation) {
+                Swal.fire({ title: 'กำลังค้นหาตำแหน่ง...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        Swal.close();
+                        const lat = position.coords.latitude;
+                        const lng = position.coords.longitude;
+                        
+                        document.getElementById('lat').value = lat.toFixed(6);
+                        document.getElementById('lng').value = lng.toFixed(6);
+                        
+                        const newLatLng = new L.LatLng(lat, lng);
+                        markerAdd.setLatLng(newLatLng);
+                        mapAdd.setView(newLatLng, 16); 
+                        markerAdd.bindPopup("ตำแหน่งปัจจุบันของคุณ").openPopup();
+                        
+                        Swal.fire({ icon: 'success', title: 'พบตำแหน่งแล้ว', toast: true, position: 'top-end', showConfirmButton: false, timer: 1500 });
+                    },
+                    (error) => {
+                        Swal.fire('ข้อผิดพลาด', 'ไม่สามารถเข้าถึงตำแหน่งได้ กรุณาเปิด GPS หรือปักหมุดเองบนแผนที่', 'error');
+                    },
+                    { enableHighAccuracy: true, timeout: 10000 }
+                );
+            } else {
+                Swal.fire('ไม่รองรับ', 'เบราว์เซอร์ของคุณไม่รองรับการหาตำแหน่ง', 'warning');
+            }
+        }
+
+        // วาดหมุดนักเรียนบนแผนที่แสดงผล (mapShow)
+        function drawAllStudentsOnMap(data) {
+            allMarkers.forEach(m => mapShow.removeLayer(m));
+            allMarkers = [];
+
+            let validCount = 0;
+            const bounds = L.latLngBounds(); // เอาไว้หาขอบเขตซูมแผนที่อัตโนมัติ
+
+            const blueIcon = new L.Icon({
+                iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+                shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
+            });
+
+            data.forEach(student => {
+                const lat = parseFloat(student['Latitude'] || student.lat);
+                const lng = parseFloat(student['Longitude'] || student.lng);
+                
+                if (!isNaN(lat) && !isNaN(lng)) {
+                    validCount++;
+                    const name = student['Full Name'] || student.fullName || 'ไม่ระบุชื่อ';
+                    const id = student['Student ID'] || student.studentId || '-';
+                    const grade = student['Grade'] || student.grade || '-';
+                    const room = student['Room'] || student.room || '-';
+                    
+                    const m = L.marker([lat, lng], { icon: blueIcon }).addTo(mapShow);
+                    m.bindPopup(`<b>${name}</b><br>รหัส: ${id}<br>ชั้น: ${grade}/${room}`);
+                    allMarkers.push(m);
+                    bounds.extend([lat, lng]); // ขยายขอบเขตพิกัด
+                }
+            });
+
+            document.getElementById('mapShow-student-count').innerText = validCount;
+
+            // ปรับ Zoom อัตโนมัติให้เห็นหมุดทุกตัวในห้องที่เลือก
+            if (validCount > 0) {
+                mapShow.fitBounds(bounds, { padding: [30, 30], maxZoom: 16 });
+            } else {
+                mapShow.setView([19.1666, 99.9022], 10);
+            }
+        }
+
+        $(document).ready(function() {
+            initMap();
+
+            $.validator.addMethod("phoneTH", function(value, element) {
+                return this.optional(element) || /^[0-9]{10}$/.test(value);
+            }, "กรุณากรอกเบอร์โทรศัพท์เป็นตัวเลข 10 หลัก");
+
+            $('#studentForm').validate({
+                rules: { phone: { phoneTH: true } },
+                errorElement: 'span',
+                errorClass: 'error',
+                submitHandler: function(form) {
+                    if (!$('#lat').val() || !$('#lng').val()) {
+                        Swal.fire('แจ้งเตือน', 'กรุณากดดึงตำแหน่งปัจจุบัน หรือปักหมุดบนแผนที่ก่อนบันทึก', 'warning');
+                        return false;
+                    }
+                    saveData();
+                }
+            });
+        });
+
+        // ฟังก์ชันจัดการหลังบันทึกเสร็จ (แจ้งเตือน + เปลี่ยนหน้า)
+        function handleSaveSuccess(formData) {
+            Swal.fire({ 
+                icon: 'success', 
+                title: 'บันทึกข้อมูลสำเร็จ!', 
+                text: 'ระบบกำลังพาไปยังแผนที่เพื่อดูตำแหน่งที่ถูกบันทึก...', 
+                showConfirmButton: false,
+                timer: 2000,
+                timerProgressBar: true
+            }).then(() => {
+                // เซ็ตค่าตัวกรองให้เป็นระดับชั้นและห้องที่เพิ่งบันทึกอัตโนมัติ
+                document.getElementById('filterGrade').value = formData.grade || formData['Grade'];
+                document.getElementById('filterRoom').value = formData.room || formData['Room'];
+                
+                // เคลียร์ฟอร์ม
+                $('#studentForm')[0].reset();
+                document.getElementById('lat').value = '';
+                document.getElementById('lng').value = '';
+                
+                // โหลดและไปหน้าแสดงข้อมูล
+                loadData(); 
+                switchTab('tab-show');
+            });
+        }
+
+        function saveData() {
+            const btn = $('#submitBtn');
+            const originalText = btn.html();
+            btn.html('<i class="fas fa-spinner fa-spin"></i> กำลังบันทึก...').prop('disabled', true);
+
+            const formData = {
+                studentId: $('#studentId').val(),
+                prefix: $('#prefix').val(),
+                fullName: $('#fullName').val(),
+                nickname: $('#nickname').val(),
+                grade: $('#grade').val(),
+                room: $('#room').val(),
+                phone: $('#phone').val(),
+                village: $('#village').val(),
+                subDistrict: $('#subDistrict').val(),
+                district: $('#district').val(),
+                province: $('#province').val(),
+                lat: $('#lat').val(),
+                lng: $('#lng').val()
+            };
+
+            if (SCRIPT_URL && SCRIPT_URL !== '') {
+                fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(formData)
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if(result.status === 'success') {
+                        handleSaveSuccess(formData);
+                    } else {
+                        Swal.fire('เกิดข้อผิดพลาด', result.message, 'error');
+                    }
+                })
+                .catch(error => {
+                    Swal.fire('ข้อผิดพลาดการเชื่อมต่อ', 'ไม่สามารถเชื่อมต่อกับฐานข้อมูลได้', 'error');
+                })
+                .finally(() => {
+                    btn.html(originalText).prop('disabled', false);
+                });
+            } else {
+                // จำลองข้อมูล (Mock Data)
+                setTimeout(() => {
+                    formData['Timestamp'] = new Date().toLocaleString('th-TH');
+                    formData['Student ID'] = formData.studentId;
+                    formData['Full Name'] = formData.prefix + formData.fullName;
+                    formData['Grade'] = formData.grade;
+                    formData['Room'] = formData.room;
+                    formData['Phone'] = formData.phone;
+                    formData['Village'] = formData.village;
+                    formData['Sub-District'] = formData.subDistrict;
+                    formData['District'] = formData.district;
+                    formData['Province'] = formData.province;
+                    formData['Latitude'] = formData.lat;
+                    formData['Longitude'] = formData.lng;
+                    
+                    globalStudentData.unshift(formData);
+                    
+                    handleSaveSuccess(formData);
+                    btn.html(originalText).prop('disabled', false);
+                }, 1000);
+            }
+        }
+
+        function loadData() {
+            if (!SCRIPT_URL || SCRIPT_URL === '') {
+                if(globalStudentData.length === 0) {
+                    globalStudentData = [
+                        { "Timestamp": "13/05/2026 08:00", "Student ID": "65001", "Prefix": "เด็กชาย", "Full Name": "สมชาย ใจดี", "Grade": "ม.1", "Room": "1", "Phone": "0812345678", "Sub-District": "แม่ต๋ำ", "Latitude": "19.1555", "Longitude": "99.9011" },
+                        { "Timestamp": "13/05/2026 09:30", "Student ID": "65002", "Prefix": "เด็กหญิง", "Full Name": "สมหญิง รักเรียน", "Grade": "ม.1", "Room": "1", "Phone": "0898765432", "Sub-District": "เวียง", "Latitude": "19.1666", "Longitude": "99.9122" },
+                        { "Timestamp": "13/05/2026 10:15", "Student ID": "64005", "Prefix": "นาย", "Full Name": "กล้าหาญ ชาญชัย", "Grade": "ม.1", "Room": "2", "Phone": "0855555555", "Sub-District": "ท่าวังทอง", "Latitude": "19.1888", "Longitude": "99.8999" },
+                        { "Timestamp": "13/05/2026 11:15", "Student ID": "64008", "Prefix": "นางสาว", "Full Name": "สวยใส ใจบุญ", "Grade": "ม.3", "Room": "13", "Phone": "0811112222", "Sub-District": "เวียง", "Latitude": "19.1777", "Longitude": "99.9000" }
+                    ];
+                }
+                applyFilter();
+                return;
+            }
+
+            Swal.fire({ title: 'กำลังโหลดข้อมูล...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+            fetch(SCRIPT_URL + '?action=getData')
+                .then(response => response.json())
+                .then(data => {
+                    Swal.close();
+                    globalStudentData = data;
+                    applyFilter(); 
+                })
+                .catch(error => {
+                    Swal.fire('ผิดพลาด', 'โหลดข้อมูลไม่สำเร็จ', 'error');
+                });
+        }
+
+        function applyFilter() {
+            const filterGrade = document.getElementById('filterGrade').value;
+            const filterRoom = document.getElementById('filterRoom').value;
+            
+            let filteredData = globalStudentData;
+
+            if (filterGrade !== '') {
+                filteredData = filteredData.filter(student => (student['Grade'] || student.grade) === filterGrade);
+            }
+            if (filterRoom !== '') {
+                filteredData = filteredData.filter(student => String(student['Room'] || student.room) === String(filterRoom));
+            }
+
+            currentDisplayData = filteredData;
+            document.getElementById('filteredCount').innerText = filteredData.length;
+            
+            updateTable(filteredData);
+            updateCharts(filteredData);
+            drawAllStudentsOnMap(filteredData); 
+        }
+
+        function updateTable(data) {
+            if ($.fn.DataTable.isDataTable('#dataTable')) {
+                $('#dataTable').DataTable().destroy();
+            }
+
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+
+            data.forEach((row, index) => {
+                const tr = document.createElement('tr');
+                tr.className = "bg-white border-b hover:bg-blue-50 transition";
+                
+                const id = row['Student ID'] || row.studentId || '-';
+                const prefix = row['Prefix'] || row.prefix || '';
+                const name = row['Full Name'] || row.fullName || '-';
+                const grade = row['Grade'] || row.grade || '-';
+                const room = row['Room'] || row.room || '-';
+                const phone = row['Phone'] || row.phone || '-';
+                const sd = row['Sub-District'] || row.subDistrict || '-';
+                const lat = parseFloat(row['Latitude'] || row.lat).toFixed(4);
+                const lng = parseFloat(row['Longitude'] || row.lng).toFixed(4);
+
+                tr.innerHTML = `
+                    <td class="px-4 py-3 font-medium text-gray-900">${id}</td>
+                    <td class="px-4 py-3">${prefix}${name}</td>
+                    <td class="px-4 py-3">${grade}</td>
+                    <td class="px-4 py-3">${room}</td>
+                    <td class="px-4 py-3">${phone}</td>
+                    <td class="px-4 py-3">${sd}</td>
+                    <td class="px-4 py-3 text-center text-xs text-blue-600"><a href="https://www.google.com/maps?q=${lat},${lng}" target="_blank" class="hover:underline bg-blue-100 px-2 py-1 rounded"><i class="fas fa-map-marker-alt"></i> ${lat}, ${lng}</a></td>
+                    <td class="px-4 py-3 text-center">
+                        <button onclick='viewDetails(${index})' class="text-white bg-primary hover:bg-secondary px-3 py-1.5 rounded-lg shadow-sm text-xs font-medium transition"><i class="fas fa-search"></i> รายละเอียด</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            dataTable = $('#dataTable').DataTable({
+                language: {
+                    url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/th.json',
+                    search: "ค้นหาในรายการกรอง:"
+                },
+                pageLength: 10,
+                responsive: true,
+                order: [] 
+            });
+        }
+
+        function viewDetails(index) {
+            const student = currentDisplayData[index];
+            if(!student) return;
+
+            const modal = document.getElementById('detailModal');
+            const content = document.getElementById('modalContent');
+            const body = document.getElementById('studentDetailBody');
+            
+            let html = '<div class="grid grid-cols-2 gap-y-3 gap-x-4 text-sm">';
+            
+            const displayMapping = {
+                'เวลาที่บันทึก': student['Timestamp'] || '-',
+                'รหัสนักเรียน': student['Student ID'] || student.studentId || '-',
+                'ชื่อ-นามสกุล': (student['Prefix'] || student.prefix || '') + (student['Full Name'] || student.fullName || '-'),
+                'ชื่อเล่น': student['Nickname'] || student.nickname || '-',
+                'ระดับชั้น': (student['Grade'] || student.grade || '-') + '/' + (student['Room'] || student.room || '-'),
+                'เบอร์โทรศัพท์': student['Phone'] || student.phone || '-',
+                'ที่อยู่': `${student['Village'] || student.village || '-'} ต.${student['Sub-District'] || student.subDistrict || '-'} อ.${student['District'] || student.district || '-'} จ.${student['Province'] || student.province || '-'}`,
+                'พิกัด (Lat, Lng)': `${student['Latitude'] || student.lat || '-'}, ${student['Longitude'] || student.lng || '-'}`
+            };
+
+            for(const [key, value] of Object.entries(displayMapping)) {
+                html += `
+                    <div class="col-span-2 md:col-span-1 bg-gray-50 p-2 rounded border border-gray-100">
+                        <span class="block text-gray-500 text-xs mb-1">${key}</span>
+                        <span class="font-medium text-gray-800">${value}</span>
+                    </div>
+                `;
+            }
+            html += '</div>';
+
+            const lat = student['Latitude'] || student.lat;
+            const lng = student['Longitude'] || student.lng;
+            if(lat && lng) {
+                html += `
+                <div class="mt-4">
+                    <a href="https://www.google.com/maps?q=${lat},${lng}" target="_blank" class="block w-full text-center bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg transition font-medium shadow-sm">
+                        <i class="fas fa-map-marked-alt mr-2"></i> นำทางด้วย Google Maps
+                    </a>
+                </div>`;
+            }
+
+            body.innerHTML = html;
+            
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                content.classList.remove('scale-95');
+            }, 10);
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('detailModal');
+            const content = document.getElementById('modalContent');
+            
+            modal.classList.add('opacity-0');
+            content.classList.add('scale-95');
+            
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 300);
+        }
+
+        function updateCharts(data) {
+            let gradeCounts = {};
+            let subDistrictCounts = {};
+
+            data.forEach(row => {
+                const grade = row['Grade'] || row.grade;
+                const sd = row['Sub-District'] || row.subDistrict;
+                
+                if (grade) { gradeCounts[grade] = (gradeCounts[grade] || 0) + 1; }
+                if (sd) { subDistrictCounts[sd] = (subDistrictCounts[sd] || 0) + 1; }
+            });
+
+            Chart.defaults.font.family = 'Sarabun';
+            Chart.defaults.color = '#4b5563';
+
+            const barCtx = document.getElementById('barChart').getContext('2d');
+            if(chartBar) chartBar.destroy();
+            
+            chartBar = new Chart(barCtx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(gradeCounts).length > 0 ? Object.keys(gradeCounts) : ['ไม่มีข้อมูล'],
+                    datasets: [{
+                        label: 'จำนวนนักเรียน (คน)',
+                        data: Object.keys(gradeCounts).length > 0 ? Object.values(gradeCounts) : [0],
+                        backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                        borderColor: 'rgba(29, 78, 216, 1)',
+                        borderWidth: 1,
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+                }
+            });
+
+            const pieCtx = document.getElementById('pieChart').getContext('2d');
+            if(chartPie) chartPie.destroy();
+
+            const colors = ['#3b82f6', '#ec4899', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4', '#f43f5e'];
+            
+            chartPie = new Chart(pieCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(subDistrictCounts).length > 0 ? Object.keys(subDistrictCounts) : ['ไม่มีข้อมูล'],
+                    datasets: [{
+                        data: Object.keys(subDistrictCounts).length > 0 ? Object.values(subDistrictCounts) : [1],
+                        backgroundColor: Object.keys(subDistrictCounts).length > 0 ? colors.slice(0, Object.keys(subDistrictCounts).length) : ['#e5e7eb'],
+                        borderWidth: 2,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'right' }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
