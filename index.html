@@ -295,7 +295,7 @@
                                 <th class="px-4 py-3">ชั้น</th>
                                 <th class="px-4 py-3">ห้อง</th>
                                 <th class="px-4 py-3">เบอร์โทรศัพท์</th>
-                                <th class="px-4 py-3">ตำบล</th>
+                                <th class="px-4 py-3">อำเภอ</th> <!-- เปลี่ยนจาก ตำบล เป็น อำเภอ -->
                                 <th class="px-4 py-3 text-center">พิกัด</th>
                                 <th class="px-4 py-3 rounded-tr-lg text-center">จัดการ</th>
                             </tr>
@@ -324,13 +324,13 @@
                     </div>
                 </div>
 
-                <!-- Chart 2: แผนภูมิวงกลม -->
+                <!-- Chart 2: แผนภูมิวงกลม (อำเภอ) -->
                 <div class="bg-white rounded-2xl shadow-xl p-6 border border-blue-50">
                     <div class="flex items-center gap-3 mb-6 border-b pb-4">
                         <div class="bg-pink-100 p-2 rounded-lg text-pink-600">
                             <i class="fas fa-chart-pie"></i>
                         </div>
-                        <h2 class="text-lg font-bold text-gray-800">สัดส่วนนักเรียนตามตำบล</h2>
+                        <h2 class="text-lg font-bold text-gray-800">สัดส่วนนักเรียนตามอำเภอ</h2> <!-- เปลี่ยนหัวข้อ -->
                     </div>
                     <div class="relative h-[300px] w-full flex justify-center">
                         <canvas id="pieChart"></canvas>
@@ -648,10 +648,10 @@
             if (!SCRIPT_URL || SCRIPT_URL === '') {
                 if(globalStudentData.length === 0) {
                     globalStudentData = [
-                        { "Timestamp": "13/05/2026 08:00", "Student ID": "65001", "Prefix": "เด็กชาย", "Full Name": "สมชาย ใจดี", "Grade": "ม.1", "Room": "1", "Phone": "0812345678", "Sub-District": "แม่ต๋ำ", "Latitude": "19.1555", "Longitude": "99.9011" },
-                        { "Timestamp": "13/05/2026 09:30", "Student ID": "65002", "Prefix": "เด็กหญิง", "Full Name": "สมหญิง รักเรียน", "Grade": "ม.1", "Room": "1", "Phone": "0898765432", "Sub-District": "เวียง", "Latitude": "19.1666", "Longitude": "99.9122" },
-                        { "Timestamp": "13/05/2026 10:15", "Student ID": "64005", "Prefix": "นาย", "Full Name": "กล้าหาญ ชาญชัย", "Grade": "ม.1", "Room": "2", "Phone": "0855555555", "Sub-District": "ท่าวังทอง", "Latitude": "19.1888", "Longitude": "99.8999" },
-                        { "Timestamp": "13/05/2026 11:15", "Student ID": "64008", "Prefix": "นางสาว", "Full Name": "สวยใส ใจบุญ", "Grade": "ม.3", "Room": "13", "Phone": "0811112222", "Sub-District": "เวียง", "Latitude": "19.1777", "Longitude": "99.9000" }
+                        { "Timestamp": "13/05/2026 08:00", "Student ID": "65001", "Prefix": "เด็กชาย", "Full Name": "สมชาย ใจดี", "Grade": "ม.1", "Room": "1", "Phone": "0812345678", "District": "เมืองพะเยา", "Latitude": "19.1555", "Longitude": "99.9011" },
+                        { "Timestamp": "13/05/2026 09:30", "Student ID": "65002", "Prefix": "เด็กหญิง", "Full Name": "สมหญิง รักเรียน", "Grade": "ม.1", "Room": "1", "Phone": "0898765432", "District": "เมืองพะเยา", "Latitude": "19.1666", "Longitude": "99.9122" },
+                        { "Timestamp": "13/05/2026 10:15", "Student ID": "64005", "Prefix": "นาย", "Full Name": "กล้าหาญ ชาญชัย", "Grade": "ม.1", "Room": "2", "Phone": "0855555555", "District": "ดอกคำใต้", "Latitude": "19.1888", "Longitude": "99.8999" },
+                        { "Timestamp": "13/05/2026 11:15", "Student ID": "64008", "Prefix": "นางสาว", "Full Name": "สวยใส ใจบุญ", "Grade": "ม.4", "Room": "13", "Phone": "0811112222", "District": "เชียงคำ", "Latitude": "19.1777", "Longitude": "99.9000" }
                     ];
                 }
                 applyFilter();
@@ -711,7 +711,7 @@
                 const grade = row['Grade'] || row.grade || '-';
                 const room = row['Room'] || row.room || '-';
                 const phone = row['Phone'] || row.phone || '-';
-                const sd = row['Sub-District'] || row.subDistrict || '-';
+                const district = row['District'] || row.district || '-'; // ดึงข้อมูล อำเภอ
                 const lat = parseFloat(row['Latitude'] || row.lat).toFixed(4);
                 const lng = parseFloat(row['Longitude'] || row.lng).toFixed(4);
 
@@ -721,7 +721,7 @@
                     <td class="px-4 py-3">${grade}</td>
                     <td class="px-4 py-3">${room}</td>
                     <td class="px-4 py-3">${phone}</td>
-                    <td class="px-4 py-3">${sd}</td>
+                    <td class="px-4 py-3">${district}</td> <!-- แสดง อำเภอ แทน ตำบล -->
                     <td class="px-4 py-3 text-center text-xs text-blue-600"><a href="https://www.google.com/maps?q=${lat},${lng}" target="_blank" class="hover:underline bg-blue-100 px-2 py-1 rounded"><i class="fas fa-map-marker-alt"></i> ${lat}, ${lng}</a></td>
                     <td class="px-4 py-3 text-center">
                         <button onclick='viewDetails(${index})' class="text-white bg-primary hover:bg-secondary px-3 py-1.5 rounded-lg shadow-sm text-xs font-medium transition"><i class="fas fa-search"></i> รายละเอียด</button>
@@ -806,14 +806,14 @@
 
         function updateCharts(data) {
             let gradeCounts = {};
-            let subDistrictCounts = {};
+            let districtCounts = {}; // เปลี่ยนตัวแปรสำหรับเก็บข้อมูล อำเภอ
 
             data.forEach(row => {
                 const grade = row['Grade'] || row.grade;
-                const sd = row['Sub-District'] || row.subDistrict;
+                const district = row['District'] || row.district; // ดึงข้อมูล อำเภอ
                 
                 if (grade) { gradeCounts[grade] = (gradeCounts[grade] || 0) + 1; }
-                if (sd) { subDistrictCounts[sd] = (subDistrictCounts[sd] || 0) + 1; }
+                if (district) { districtCounts[district] = (districtCounts[district] || 0) + 1; } // นับจำนวนตาม อำเภอ
             });
 
             Chart.defaults.font.family = 'Sarabun';
@@ -850,10 +850,10 @@
             chartPie = new Chart(pieCtx, {
                 type: 'doughnut',
                 data: {
-                    labels: Object.keys(subDistrictCounts).length > 0 ? Object.keys(subDistrictCounts) : ['ไม่มีข้อมูล'],
+                    labels: Object.keys(districtCounts).length > 0 ? Object.keys(districtCounts) : ['ไม่มีข้อมูล'], // แสดงป้ายชื่อ อำเภอ
                     datasets: [{
-                        data: Object.keys(subDistrictCounts).length > 0 ? Object.values(subDistrictCounts) : [1],
-                        backgroundColor: Object.keys(subDistrictCounts).length > 0 ? colors.slice(0, Object.keys(subDistrictCounts).length) : ['#e5e7eb'],
+                        data: Object.keys(districtCounts).length > 0 ? Object.values(districtCounts) : [1], // แสดงข้อมูลของ อำเภอ
+                        backgroundColor: Object.keys(districtCounts).length > 0 ? colors.slice(0, Object.keys(districtCounts).length) : ['#e5e7eb'],
                         borderWidth: 2,
                         hoverOffset: 4
                     }]
