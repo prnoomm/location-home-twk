@@ -427,10 +427,21 @@
             const initialLat = 19.1666;
             const initialLng = 99.9022;
 
+            // ตั้งค่า Layer แผนที่แบบปกติและแบบดาวเทียม
+            const streetLayerAdd = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors' });
+            const satelliteLayerAdd = L.tileLayer('http://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', { maxZoom: 20, subdomains: ['mt0', 'mt1', 'mt2', 'mt3'], attribution: '&copy; Google Maps' });
+
             // === แผนที่ 1 สำหรับแท็บเพิ่มข้อมูล ===
-            mapAdd = L.map('mapAdd').setView([initialLat, initialLng], 10);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; OpenStreetMap contributors'
+            mapAdd = L.map('mapAdd', {
+                center: [initialLat, initialLng],
+                zoom: 10,
+                layers: [streetLayerAdd] // ค่าเริ่มต้นเป็นแผนที่ปกติ
+            });
+
+            // เพิ่มตัวเลือกสลับแผนที่บนมุมขวาบน
+            L.control.layers({
+                "แผนที่ถนน (ปกติ)": streetLayerAdd,
+                "ดาวเทียม (Google)": satelliteLayerAdd
             }).addTo(mapAdd);
 
             const redIcon = new L.Icon({
@@ -455,10 +466,21 @@
                 document.getElementById('lng').value = e.latlng.lng.toFixed(6);
             });
 
+            // ตั้งค่า Layer สำหรับแผนที่ 2
+            const streetLayerShow = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors' });
+            const satelliteLayerShow = L.tileLayer('http://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', { maxZoom: 20, subdomains: ['mt0', 'mt1', 'mt2', 'mt3'], attribution: '&copy; Google Maps' });
+
             // === แผนที่ 2 สำหรับแท็บแสดงข้อมูล ===
-            mapShow = L.map('mapShow').setView([initialLat, initialLng], 10);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; OpenStreetMap contributors'
+            mapShow = L.map('mapShow', {
+                center: [initialLat, initialLng],
+                zoom: 10,
+                layers: [streetLayerShow]
+            });
+
+            // เพิ่มตัวเลือกสลับแผนที่
+            L.control.layers({
+                "แผนที่ถนน (ปกติ)": streetLayerShow,
+                "ดาวเทียม (Google)": satelliteLayerShow
             }).addTo(mapShow);
         }
 
