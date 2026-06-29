@@ -5,14 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ระบบกรอกพิกัดการเยี่ยมบ้านนักเรียน</title>
     
+    <!-- Google Fonts: Sarabun -->
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
+    <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     
+    <!-- DataTables CSS -->
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.tailwindcss.min.css">
     
+    <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
@@ -51,6 +56,7 @@
 
     <main class="flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         
+        <!-- เมนู Tabs -->
         <div class="flex flex-wrap justify-center space-x-2 md:space-x-4 mb-8 bg-white p-2 rounded-2xl shadow-sm border border-blue-100 w-max mx-auto">
             <button onclick="switchTab('tab-add')" id="btn-tab-add" class="tab-btn px-4 md:px-6 py-2.5 rounded-xl font-medium text-sm md:text-base transition-all duration-300 bg-primary text-white shadow-md flex items-center gap-2">
                 <i class="fas fa-user-plus"></i> <span>เพิ่มข้อมูล</span>
@@ -63,6 +69,7 @@
             </button>
         </div>
 
+        <!-- TAB 1: เพิ่มข้อมูล -->
         <div id="tab-add" class="tab-content active">
             <div class="bg-white rounded-2xl shadow-xl overflow-hidden border border-blue-50">
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-0">
@@ -171,6 +178,7 @@
             </div>
         </div>
 
+        <!-- TAB 2: แสดงข้อมูล -->
         <div id="tab-show" class="tab-content">
             <div class="bg-white rounded-2xl shadow-xl p-6 md:p-8 border border-blue-50">
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 border-b pb-4">
@@ -183,6 +191,7 @@
                     </button>
                 </div>
                 
+                <!-- ส่วนเครื่องมือกรองข้อมูล (Filter) + ปุ่ม Export -->
                 <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 mb-6 flex flex-col lg:flex-row gap-4 items-center justify-between">
                     <div class="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
                         <div class="w-full sm:w-48">
@@ -214,6 +223,7 @@
                     </div>
                 </div>
 
+                <!-- แผนที่แสดงพิกัดที่กรองแล้ว -->
                 <div class="w-full mb-8 relative bg-gray-50 p-2 rounded-xl border border-gray-200">
                     <h3 class="font-bold text-gray-800 mb-2 px-2 pt-2"><i class="fas fa-map-marked-alt text-primary mr-2"></i>แผนที่เส้นทางการเยี่ยมบ้านนักเรียน</h3>
                     <div id="mapShow" class="w-full h-[400px] border-2 border-white shadow-inner rounded-lg"></div>
@@ -242,6 +252,7 @@
             </div>
         </div>
 
+        <!-- TAB 3: Dashboard -->
         <div id="tab-dash" class="tab-content">
             <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 mb-6 flex flex-col md:flex-row gap-4 items-center justify-between">
                 <div class="flex flex-col md:flex-row gap-4 w-full md:w-auto flex-grow">
@@ -283,6 +294,7 @@
         © 2026 ระบบกรอกพิกัดการเยี่ยมบ้านนักเรียน | Pichayanart Reerak
     </footer>
 
+    <!-- Modal สำหรับดูข้อมูลรายละเอียด -->
     <div id="detailModal" class="fixed inset-0 bg-black/60 z-[2000] hidden flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
         <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full transform scale-95 transition-transform duration-300 overflow-hidden" id="modalContent">
             <div class="bg-gradient-to-r from-primary to-secondary p-4 flex justify-between items-center text-white">
@@ -296,6 +308,7 @@
         </div>
     </div>
 
+    <!-- JS Libraries -->
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.19.5/jquery.validate.min.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -313,8 +326,8 @@
         let schoolMarkerShow;    
         
         // พิกัดจุดเริ่มต้น (โรงเรียน)
-        const SCHOOL_LAT = 19.686010813533557; 
-        const SCHOOL_LNG = 100.20041340861093;
+        const SCHOOL_LAT = 19.1666; 
+        const SCHOOL_LNG = 99.9022;
 
         let dataTable;
         let chartBar, chartPie, chartGender;
@@ -409,6 +422,9 @@
             return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))); 
         }
 
+        // ==========================================
+        // ปรับปรุงฟังก์ชันการวาดหมุดบนแผนที่ให้มี Badge
+        // ==========================================
         function drawAllStudentsOnMap(data) {
             allMarkers.forEach(m => mapShow.removeLayer(m)); allMarkers = [];
             if(routeLine) mapShow.removeLayer(routeLine);
@@ -428,12 +444,6 @@
 
             let unvisited = data.filter(s => !isNaN(parseFloat(s['Latitude'] || s.lat)) && !isNaN(parseFloat(s['Longitude'] || s.lng)));
 
-            const blueIcon = new L.Icon({
-                iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
-                shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-                iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
-            });
-
             let routePoints = [[SCHOOL_LAT, SCHOOL_LNG]]; 
             let totalDistance = 0, currentLat = SCHOOL_LAT, currentLng = SCHOOL_LNG;
 
@@ -446,11 +456,31 @@
 
                 let next = unvisited.splice(nearestIdx, 1)[0];
                 let nLat = parseFloat(next['Latitude'] || next.lat), nLng = parseFloat(next['Longitude'] || next.lng);
+                
+                // ดึงรหัสนักเรียนมาแสดงบน Badge
+                let stuId = next['Student ID'] || next.studentId || '-';
+
+                // ใช้ L.divIcon เพื่อสร้างโค้ด HTML ซ้อน Badge สีแดงไว้บนรูปหมุด
+                const badgeIcon = L.divIcon({
+                    className: 'bg-transparent border-0', 
+                    html: `
+                        <div style="position: relative; width: 25px; height: 41px;">
+                            <img src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png" style="position: absolute; left: -5px; top: 0px; width: 41px; height: 41px; max-width: none;">
+                            <img src="https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png" style="position: absolute; left: 0; top: 0; width: 25px; height: 41px; max-width: none;">
+                            <div style="position: absolute; top: -14px; left: 50%; transform: translateX(-50%); background-color: #ef4444; color: white; font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 9999px; border: 1.5px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.3); white-space: nowrap; z-index: 1000;">
+                                ${stuId}
+                            </div>
+                        </div>
+                    `,
+                    iconSize: [25, 41],
+                    iconAnchor: [12, 41],
+                    popupAnchor: [1, -34]
+                });
 
                 totalDistance += minDist; routePoints.push([nLat, nLng]);
 
-                const m = L.marker([nLat, nLng], { icon: blueIcon }).addTo(mapShow);
-                m.bindPopup(`<b>${next['Full Name'] || next.fullName}</b><br>รหัส: ${next['Student ID'] || next.studentId}<br>ชั้น: ${next['Grade'] || next.grade}/${next['Room'] || next.room}<br><span class="text-xs text-gray-500">ห่างจากจุดก่อนหน้า: ${minDist.toFixed(2)} กม.</span>`);
+                const m = L.marker([nLat, nLng], { icon: badgeIcon }).addTo(mapShow);
+                m.bindPopup(`<b>${next['Full Name'] || next.fullName}</b><br>รหัส: ${stuId}<br>ชั้น: ${next['Grade'] || next.grade}/${next['Room'] || next.room}<br><span class="text-xs text-gray-500">ห่างจากจุดก่อนหน้า: ${minDist.toFixed(2)} กม.</span>`);
                 allMarkers.push(m); bounds.extend([nLat, nLng]);
 
                 currentLat = nLat; currentLng = nLng; validCount++;
@@ -472,69 +502,48 @@
             else mapShow.setView([SCHOOL_LAT, SCHOOL_LNG], 10);
         }
 
-        // ==========================================
-        // !!! ฟังก์ชันส่งออก CSV ที่เพิ่มเข้ามาใหม่ !!!
-        // ==========================================
         function exportCSV() {
             if (!currentDisplayData || currentDisplayData.length === 0) {
                 Swal.fire('แจ้งเตือน', 'ไม่มีข้อมูลในตารางสำหรับส่งออกไฟล์ CSV', 'warning');
                 return;
             }
 
-            // 1. กำหนดชื่อหัวคอลัมน์ภาษาไทย
             const headers = [
                 "เวลาที่บันทึก", "รหัสนักเรียน", "คำนำหน้า", "ชื่อ-นามสกุล", "ชื่อเล่น",
                 "ระดับชั้น", "ห้อง", "เบอร์โทรศัพท์", "บ้านเลขที่/หมู่บ้าน", "ตำบล", 
                 "อำเภอ", "จังหวัด", "ละติจูด", "ลองจิจูด"
             ];
 
-            // ฟังก์ชันซ่อมค่านักเรียนเพื่อไม่ให้เครื่องหมายลูกน้ำ (,) ไปตีกันกับคอลัมน์ CSV
             const safeCSV = (val) => {
                 if (val === null || val === undefined) return '""';
-                const str = String(val).replace(/"/g, '""'); // ซ้อน double quote ตามหลักสากล
+                const str = String(val).replace(/"/g, '""');
                 return `"${str}"`;
             };
 
-            // 2. Map ข้อมูลแถว
             const rows = currentDisplayData.map(s => {
                 return [
-                    safeCSV(s['Timestamp'] || ''),
-                    safeCSV(s['Student ID'] || s.studentId || ''),
-                    safeCSV(s['Prefix'] || s.prefix || ''),
-                    safeCSV(s['Full Name'] || s.fullName || ''),
-                    safeCSV(s['Nickname'] || s.nickname || ''),
-                    safeCSV(s['Grade'] || s.grade || ''),
-                    safeCSV(s['Room'] || s.room || ''),
-                    safeCSV(s['Phone'] || s.phone || ''),
-                    safeCSV(s['Village'] || s.village || ''),
-                    safeCSV(s['Sub-District'] || s.subDistrict || ''),
-                    safeCSV(s['District'] || s.district || ''),
-                    safeCSV(s['Province'] || s.province || ''),
-                    safeCSV(s['Latitude'] || s.lat || ''),
-                    safeCSV(s['Longitude'] || s.lng || '')
+                    safeCSV(s['Timestamp'] || ''), safeCSV(s['Student ID'] || s.studentId || ''),
+                    safeCSV(s['Prefix'] || s.prefix || ''), safeCSV(s['Full Name'] || s.fullName || ''),
+                    safeCSV(s['Nickname'] || s.nickname || ''), safeCSV(s['Grade'] || s.grade || ''),
+                    safeCSV(s['Room'] || s.room || ''), safeCSV(s['Phone'] || s.phone || ''),
+                    safeCSV(s['Village'] || s.village || ''), safeCSV(s['Sub-District'] || s.subDistrict || ''),
+                    safeCSV(s['District'] || s.district || ''), safeCSV(s['Province'] || s.province || ''),
+                    safeCSV(s['Latitude'] || s.lat || ''), safeCSV(s['Longitude'] || s.lng || '')
                 ].join(',');
             });
 
-            // 3. รวมหัวตารางเข้ากับข้อมูล แปะ BOM (\uFEFF) ไว้หน้าสุดให้ Excel เปิดอ่านภาษาไทยไม่เพี้ยน
             const csvContent = "\uFEFF" + headers.join(',') + "\n" + rows.join("\n");
-
-            // 4. ตั้งชื่อไฟล์ตามระดับชั้น/ห้อง ที่กำลังกรองอยู่
             const selectedGrade = document.getElementById('filterGrade').value || 'ทุกระดับชั้น';
             const selectedRoom = document.getElementById('filterRoom').value || 'ทุกห้อง';
             const fileName = `พิกัดเยี่ยมบ้าน_${selectedGrade}_ห้อง${selectedRoom}.csv`;
 
-            // 5. สั่งดาวน์โหลด
             const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement("a");
             const url = URL.createObjectURL(blob);
-            link.setAttribute("href", url);
-            link.setAttribute("download", fileName);
-            link.style.visibility = 'hidden';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            link.setAttribute("href", url); link.setAttribute("download", fileName);
+            link.style.visibility = 'hidden'; document.body.appendChild(link);
+            link.click(); document.body.removeChild(link);
         }
-        // ==========================================
 
         $(document).ready(function() {
             initMap();
